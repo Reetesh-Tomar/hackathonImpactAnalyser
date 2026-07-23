@@ -5,12 +5,20 @@ Main entry point for the AI service.
 
 import os
 import time
+
+# Load .env BEFORE any app module reads environment variables. This is what
+# makes "paste an API key into ai-service/.env and restart" actually work —
+# without it, AI_PROVIDER / GROQ_API_KEY / OPENAI_API_KEY set in .env were
+# silently ignored and the service always ran in mock mode.
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.models import HealthResponse
 from app.pipeline import AgentPipeline
-from app.routes import chat, assistant, change_impact, system
+from app.routes import chat, assistant, change_impact, system, sanitize, react_pipeline
 
 # Application metadata
 APP_VERSION = "1.0.0"
@@ -49,6 +57,10 @@ app.include_router(chat.router, prefix="/api/v1", tags=["Chat"])
 app.include_router(assistant.router, prefix="/api/v1", tags=["Assistant"])
 app.include_router(change_impact.router, prefix="/api/v1", tags=["Change Impact"])
 app.include_router(system.router, prefix="/api/v1", tags=["System"])
+app.include_router(sanitize.router, prefix="/api/v1", tags=["Security"])
+
+# v2: hardened 3-agent ReAct pipeline (Code Auditor -> Historical Detective -> Risk Synthesizer)
+app.include_router(react_pipeline.router, prefix="/api/v2", tags=["Change Impact V2 (ReAct)"])
 
 
 @app.get("/health", response_model=HealthResponse, tags=["Health"])

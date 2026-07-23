@@ -23,6 +23,14 @@ export interface SimilarIncident {
   similarity_score?: number
 }
 
+export interface ImpactedServiceDetail {
+  name: string
+  criticality: string
+  owner: string
+  type: string
+  role: 'target' | 'direct' | 'downstream' | string
+}
+
 export interface ChangeImpactResponse {
   analysisId: string
   riskScore: number
@@ -41,6 +49,10 @@ export interface ChangeImpactResponse {
   dataSourcesUsed: string[]
   processingTimeMs: number
   mockMode: boolean
+  impactedServicesDetailed: ImpactedServiceDetail[]
+  primaryComponent?: string | null
+  inferredChangeType?: string | null
+  reasoning: string[]
 }
 
 export interface ChangeType {

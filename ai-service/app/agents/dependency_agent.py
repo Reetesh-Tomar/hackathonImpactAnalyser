@@ -24,12 +24,16 @@ class DependencyAgent(BaseAgent):
         
         all_impacted = []
         dependency_chain = []
-        
+        depth_by_service: Dict[str, int] = {}
+
         def traverse_dependencies(svc_name: str, visited: set, depth: int = 0):
-            """Traverse dependency chain recursively."""
+            """Traverse dependency chain recursively, tracking BFS depth from
+            the primary (target) services so each impacted service can later
+            be classified as target / direct / downstream."""
             if svc_name in visited or depth > 5:
                 return
             visited.add(svc_name)
+            depth_by_service[svc_name] = min(depth_by_service.get(svc_name, depth), depth)
             if svc_name in service_map:
                 svc = service_map[svc_name]
                 all_impacted.append(svc_name)
@@ -49,6 +53,15 @@ class DependencyAgent(BaseAgent):
         for svc_name in primary_services:
             traverse_dependencies(svc_name, visited_services)
 
+        def classify_role(svc_name: str) -> str:
+            """target = explicitly requested component; direct = one hop away
+            in the dependency graph; downstream = reached transitively."""
+            if svc_name in primary_services:
+                return "target"
+            if depth_by_service.get(svc_name, 99) <= 1:
+                return "direct"
+            return "downstream"
+
         # Get criticality and team info for impacted services
         impacted_details = []
         for name in all_impacted:
@@ -58,7 +71,8 @@ class DependencyAgent(BaseAgent):
                     "name": name,
                     "criticality": svc.get("criticality", "unknown"),
                     "owner": svc.get("owner", "unknown"),
-                    "type": svc.get("type", "unknown")
+                    "type": svc.get("type", "unknown"),
+                    "role": classify_role(name)
                 })
 
         # Use LLM for additional analysis

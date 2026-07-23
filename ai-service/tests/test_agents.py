@@ -27,6 +27,29 @@ def embeddings():
     return EmbeddingService(provider="mock")
 
 
+class TestPipelineProviderIsolation:
+    """
+    Regression test for the "Analyze" button crash: the deterministic
+    analysis pipeline must default to the mock/rule-based provider even
+    when AI_PROVIDER is set to a live provider for the chat/assistant
+    endpoints (see base_agent.py comment). Pointing every one of the 7
+    pipeline agents at a live LLM caused a single analyze request to take
+    30-120+ seconds and time out.
+    """
+
+    def test_agent_ignores_ai_provider_and_defaults_to_mock(self, data_loader, monkeypatch):
+        monkeypatch.setenv("AI_PROVIDER", "ollama")
+        monkeypatch.delenv("PIPELINE_AI_PROVIDER", raising=False)
+        agent = IntakeAgent(data_loader)
+        assert agent.provider == "mock"
+
+    def test_agent_honors_explicit_pipeline_ai_provider_override(self, data_loader, monkeypatch):
+        monkeypatch.setenv("AI_PROVIDER", "mock")
+        monkeypatch.setenv("PIPELINE_AI_PROVIDER", "ollama")
+        agent = IntakeAgent(data_loader)
+        assert agent.provider == "ollama"
+
+
 @pytest.fixture
 def sample_input():
     return {

@@ -1,0 +1,3 @@
+com\changeanalyzer\ChangeAnalyzerApplicationTests.class
+com\changeanalyzer\service\AiServiceClientTest.class
+com\changeanalyzer\controller\ApiProxyControllerTest.class

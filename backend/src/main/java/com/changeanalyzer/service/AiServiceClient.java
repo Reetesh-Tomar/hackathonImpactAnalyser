@@ -175,6 +175,30 @@ public class AiServiceClient {
     }
 
     /**
+     * Proxy a v2 ReAct multi-agent change impact analysis request to the AI service.
+     * Unlike the v1 pipeline, this is not persisted to H2 here — the AI service's
+     * response already carries its own full audit trail (agent_traces, redaction_report).
+     */
+    public JsonNode analyzeChangeImpactReact(Map<String, Object> request) {
+        try {
+            ObjectNode requestBody = objectMapper.valueToTree(request);
+
+            String responseJson = webClient.post()
+                    .uri(aiServiceUrl + "/api/v2/change-impact/analyze-react")
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .timeout(Duration.ofMillis(timeout))
+                    .block();
+
+            return objectMapper.readTree(responseJson);
+        } catch (Exception e) {
+            log.error("Failed to call AI service (v2 ReAct pipeline): {}", e.getMessage());
+            return createErrorResponse("AI Service (v2 ReAct pipeline) unavailable: " + e.getMessage());
+        }
+    }
+
+    /**
      * Get change types from AI service.
      */
     public JsonNode getChangeTypes() {

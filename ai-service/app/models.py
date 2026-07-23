@@ -67,6 +67,10 @@ class ChangeImpactResponse(BaseModel):
     dataSourcesUsed: List[str]
     processingTimeMs: int
     mockMode: bool
+    impactedServicesDetailed: List[Dict[str, Any]] = []
+    primaryComponent: Optional[str] = None
+    inferredChangeType: Optional[str] = None
+    reasoning: List[str] = []
 
 
 class AgentTrace(BaseModel):

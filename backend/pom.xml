@@ -18,7 +18,7 @@
     <description>Backend service for AI Change Impact Analyzer</description>
 
     <properties>
-        <java.version>21</java.version>
+        <java.version>17</java.version>
     </properties>
 
     <dependencies>

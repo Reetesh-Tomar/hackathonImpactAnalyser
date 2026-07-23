@@ -1,4 +1,5 @@
 import type { ChangeImpactResponse, AssistantResponse, ChatResponse, ChangeType, Component } from '../types'
+import type { ChangeAnalysisRequestV2, FullAnalysisResponseV2 } from '../types/reactAnalysis'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081'
 const AI_SERVICE_URL = import.meta.env.VITE_AI_SERVICE_URL || 'http://localhost:8000'
@@ -88,6 +89,17 @@ export async function analyzeChangeImpactFromPrompt(promptData: Record<string, u
   return fetchApi<ChangeImpactResponse>('/api/v1/change-impact/analyze-prompt', {
     method: 'POST',
     body: JSON.stringify(promptData),
+  })
+}
+
+// Change Impact Analysis — v2 hardened 3-agent ReAct pipeline
+// (Code Auditor -> Historical Detective -> Risk Synthesizer, see ARCHITECTURE_BLUEPRINT.md)
+export async function analyzeChangeImpactReact(
+  data: ChangeAnalysisRequestV2
+): Promise<FullAnalysisResponseV2> {
+  return fetchApi<FullAnalysisResponseV2>('/api/v2/change-impact/analyze-react', {
+    method: 'POST',
+    body: JSON.stringify(data),
   })
 }
 

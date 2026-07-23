@@ -1,0 +1,28 @@
+﻿Q: tell me about the architecture
+ classification: conversation
+ reply: From the system architecture docs: # System Architecture
+
+## Overview
+The platform is a microservices-based e-commerce system consisting of 19+ services organized by domain. Services communicate via synchronous REST APIs and asynchronous Kafka event streams.
+
+## High-Level Architecture
+
+```
+[Client Apps] ΓåÆ [API Gateway (svc-007)] ΓåÆ [Microservic
+
+Q: what does the system topology look like
+ classification: conversation
+ reply: From the system architecture docs: # System Architecture
+
+## Overview
+The platform is a microservices-based e-commerce system consisting of 19+ services organized by domain. Services communicate via synchronous REST APIs and asynchronous Kafka event streams.
+
+## High-Level Architecture
+
+```
+[Client Apps] ΓåÆ [API Gateway (svc-007)] ΓåÆ [Microservic
+
+Q: tell me about payment-gateway
+ classification: conversation
+ reply: **payment-gateway** (critical criticality, owned by team-payments) ù Payment processing service handling credit card, PayPal, and digital wallet transactions. Related services you might also check: api-gateway. Most relevant historical incident: **Payment Gateway Outage** (severity: critical), resolved via: Increased connection pool size from 50 to
+

@@ -42,9 +42,14 @@ class EmbeddingService:
         """Generate deterministic embeddings using hash-based approach for mock mode."""
         hash_obj = hashlib.sha256(text.encode())
         hash_bytes = hash_obj.digest()
-        # Create a pseudo-random but deterministic vector of dimension 384
-        np.random.seed(int.from_bytes(hash_bytes[:8], 'big'))
-        vec = np.random.randn(self.dimension)
+        # Create a pseudo-random but deterministic vector of dimension 384.
+        # NumPy's legacy RandomState.seed() requires an unsigned 32-bit integer
+        # (0 to 2**32 - 1); mask the hash down to that range instead of
+        # truncating to 8 raw bytes (which can overflow on numpy>=1.17 and
+        # raises ValueError on numpy>=2.x).
+        seed = int.from_bytes(hash_bytes[:8], 'big') % (2 ** 32)
+        rng = np.random.RandomState(seed)
+        vec = rng.randn(self.dimension)
         # Normalize
         vec = vec / np.linalg.norm(vec)
         return vec.tolist()
