@@ -31,18 +31,21 @@ const SuggestionChips: React.FC<SuggestionChipsProps> = ({ suggestions, onSelect
           display: inline-flex;
           align-items: center;
           padding: 6px 14px;
-          background: rgba(99, 102, 241, 0.1);
-          border: 1px solid rgba(99, 102, 241, 0.3);
+          background: rgba(29, 78, 216, 0.1);
+          border: 1px solid rgba(29, 78, 216, 0.3);
           border-radius: 20px;
-          color: #818cf8;
+          color: var(--primary-light);
           font-size: 0.8rem;
           cursor: pointer;
-          transition: all 0.2s ease;
+          /* suggestion chip hover transition: all 0.15s */
+          transition: all 0.15s;
           font-family: inherit;
         }
         .chip:hover {
-          background: rgba(99, 102, 241, 0.2);
-          border-color: #6366f1;
+          /* suggestion chips invert color on hover: background #0B2D9F, text -> white */
+          background: #0B2D9F;
+          border-color: #0B2D9F;
+          color: #ffffff;
           transform: translateY(-1px);
         }
         .chip:active {

@@ -38,24 +38,38 @@ class IntakeAgent(BaseAgent):
         # Get LLM interpretation
         interpretation = self._call_llm(system_prompt, user_prompt)
 
-        # Identify affected services from CMDB
+        # Identify affected services from CMDB.
+        #
+        # Explicit affected_services_input matches always win. For free-text
+        # matching against the title/description, require ALL of a service's
+        # name words to be present (not just any single word) — otherwise a
+        # generic word shared by many service names (e.g. "gateway" in both
+        # "payment-gateway" and "api-gateway", or "database" in
+        # "database-proxy") causes unrelated services to match on that one
+        # word alone, which was previously producing noisy/incorrect primary
+        # component resolution.
         services = self.data_loader.get_services()
-        matched_services = []
+        change_lower = (change_title + " " + change_description).lower()
+
+        explicit_matches = [svc["name"] for svc in services if svc["name"] in affected_services_input]
+        text_matches = []
         for svc in services:
-            svc_name_lower = svc["name"].lower()
-            change_lower = (change_title + " " + change_description).lower()
-            if any(word in change_lower for word in svc_name_lower.replace("-", " ").split()):
-                matched_services.append(svc["name"])
-            if svc["name"] in affected_services_input:
-                matched_services.append(svc["name"])
+            name_words = [w for w in svc["name"].lower().replace("-", " ").split() if w]
+            if name_words and all(word in change_lower for word in name_words):
+                text_matches.append(svc["name"])
+
+        # Preserve order: explicit input matches first (most authoritative),
+        # then free-text matches, de-duplicated.
+        matched_services = []
+        for name in explicit_matches + text_matches:
+            if name not in matched_services:
+                matched_services.append(name)
 
         # If no services matched, use the input or a default
         if not matched_services and affected_services_input:
-            matched_services = affected_services_input
+            matched_services = list(affected_services_input)
         elif not matched_services:
             matched_services = ["unknown"]
-
-        matched_services = list(set(matched_services))
 
         result = {
             "change_title": change_title,
@@ -70,13 +84,14 @@ class IntakeAgent(BaseAgent):
         return result
 
     def _determine_scope(self, change_type: str, services: List[str]) -> str:
-        """Determine the scope of the change."""
+        """Determine the scope of the change, purely by how many concrete
+        services it touches (change_type is reported separately — mixing it
+        into the scope label made an infrastructure change to a single
+        service get classified the same as a multi-service change)."""
         if len(services) > 3:
             return "enterprise-wide"
         elif len(services) > 1:
             return "multi-service"
-        elif change_type == "infrastructure":
-            return "infrastructure"
         else:
             return "single-service"
 

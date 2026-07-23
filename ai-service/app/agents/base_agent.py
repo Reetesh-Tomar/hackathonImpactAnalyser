@@ -2,8 +2,10 @@
 Base agent class for the multi-agent pipeline.
 """
 
+import json
 import time
 import os
+from enum import Enum
 from typing import Dict, Any, Optional, List
 from abc import ABC, abstractmethod
 from datetime import datetime
@@ -11,6 +13,15 @@ from datetime import datetime
 from app.models import AgentTrace, AgentType
 from app.rag.data_loader import DataLoader
 from app.rag.embeddings import EmbeddingService
+
+
+def _json_default(obj: Any) -> Any:
+    """json.dumps 'default' hook: makes Enum members (e.g. RiskLevel.MEDIUM)
+    and any other non-natively-serializable value JSON-safe by falling back
+    to its .value (for Enums) or its string representation."""
+    if isinstance(obj, Enum):
+        return obj.value
+    return str(obj)
 
 
 class BaseAgent(ABC):
@@ -21,7 +32,17 @@ class BaseAgent(ABC):
         self.agent_type = agent_type
         self.data_loader = data_loader
         self.embeddings = embedding_service
-        self.provider = os.getenv("AI_PROVIDER", "mock")
+        # DELIBERATELY separate from AI_PROVIDER (which controls the chat/
+        # assistant's live-LLM behavior). This deterministic multi-agent risk
+        # pipeline is architected to produce fast, deterministic risk metrics
+        # (see ARCHITECTURE_BLUEPRINT.md / MODULE 4 guardrails) — it must not
+        # silently become dependent on 7 sequential live LLM round-trips just
+        # because a real provider was configured for conversational chat.
+        # That coupling previously caused /api/v1/change-impact/analyze to
+        # take 30-120+ seconds (one live call per agent) and time out/crash.
+        # Set PIPELINE_AI_PROVIDER explicitly to opt the analysis pipeline
+        # into live-LLM narrative generation as well.
+        self.provider = os.getenv("PIPELINE_AI_PROVIDER", "mock")
         self.openai_client = None
         self._init_openai()
 
@@ -132,7 +153,15 @@ class BaseAgent(ABC):
 
         try:
             result = self.process(input_data, context)
-            trace.output = str(result)
+            # IMPORTANT: this must be valid JSON, not a Python str(dict) repr
+            # (single-quoted, Enum reprs like "<RiskLevel.MEDIUM: 'medium'>",
+            # etc). pipeline.py does `json.loads(trace.output)` to rehydrate
+            # this agent's structured result into `context[agent_name]` for
+            # every downstream agent to read. A str() repr silently fails
+            # that json.loads, so every downstream agent would fall back to
+            # an empty {} context and produce only generic placeholder
+            # output (this was a real, previously-undetected bug).
+            trace.output = json.dumps(result, default=_json_default)
             trace.status = "completed"
             trace.evidence = self._get_evidence()
         except Exception as e:

@@ -1,0 +1,7 @@
+com\changeanalyzer\model\Analysis.class
+com\changeanalyzer\repository\AnalysisRepository.class
+com\changeanalyzer\controller\ReactPipelineProxyController.class
+com\changeanalyzer\service\AiServiceClient.class
+com\changeanalyzer\controller\ApiProxyController.class
+com\changeanalyzer\ChangeAnalyzerApplication.class
+com\changeanalyzer\config\WebConfig.class

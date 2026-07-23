@@ -10,6 +10,7 @@ from datetime import datetime
 from app.models import ChangeImpactRequest, ChangeImpactResponse, AgentTrace
 from app.rag.data_loader import DataLoader
 from app.rag.embeddings import EmbeddingService
+from app.agents.conversational_engine import ConversationalEngine
 from app.agents.intake_agent import IntakeAgent
 from app.agents.dependency_agent import DependencyAgent
 from app.agents.knowledge_agent import KnowledgeAgent
@@ -26,6 +27,7 @@ class AgentPipeline:
                  embedding_service: Optional[EmbeddingService] = None):
         self.data_loader = data_loader or DataLoader()
         self.embeddings = embedding_service or EmbeddingService()
+        self.conversational_engine = ConversationalEngine(self.data_loader, self.embeddings)
 
         # Initialize agents
         self.agents = {
@@ -123,7 +125,11 @@ class AgentPipeline:
             retrievedEvidence=summary_output.get("retrieved_evidence", []),
             dataSourcesUsed=summary_output.get("data_sources_used", ["cmdb.json"]),
             processingTimeMs=int((time.time() - start_time) * 1000),
-            mockMode=self.embeddings.provider == "mock"
+            mockMode=self.embeddings.provider == "mock",
+            impactedServicesDetailed=summary_output.get("impacted_services_detailed", []),
+            primaryComponent=summary_output.get("primary_component"),
+            inferredChangeType=summary_output.get("inferred_change_type"),
+            reasoning=summary_output.get("reasoning", [])
         )
 
         return response
@@ -131,74 +137,16 @@ class AgentPipeline:
     def classify_and_respond(self, message: str, conversation_history: list = None) -> dict:
         """
         Unified assistant route.
-        Classifies input as conversation or change-analysis and responds accordingly.
-        """
-        # Simple classification logic
-        change_keywords = [
-            "change", "deploy", "impact", "risk", "migration", "upgrade",
-            "release", "rollout", "modify", "update", "config", "database",
-            "migrate", "incident", "analysis"
-        ]
-        
-        message_lower = message.lower()
-        is_change_analysis = any(kw in message_lower for kw in change_keywords)
-        
-        if is_change_analysis or len(message.split()) > 10:
-            # Likely a change analysis request
-            classification = "change-analysis"
-            
-            # Extract basic intent
-            intent = {
-                "type": "change_analysis",
-                "requires_full_pipeline": True
-            }
-            
-            reply = (
-                "I've identified this as a change impact analysis request. "
-                "I'll analyze the potential risks and impacts. "
-                "Please provide more details about the proposed change."
-            )
-            
-            suggested_actions = [
-                "Run full impact analysis",
-                "View similar past incidents",
-                "Check service dependencies"
-            ]
-        else:
-            # General conversation
-            classification = "conversation"
-            intent = {"type": "general_chat"}
-            reply = self._generate_chat_response(message, conversation_history)
-            suggested_actions = [
-                "Ask about architecture",
-                "Query past incidents",
-                "Check change history"
-            ]
-        
-        return {
-            "classification": classification,
-            "reply": reply,
-            "extracted_intent": intent,
-            "suggested_actions": suggested_actions
-        }
 
-    def _generate_chat_response(self, message: str, history: list = None) -> str:
-        """Generate a conversational response."""
-        message_lower = message.lower()
-        
-        # Simple rule-based chat responses
-        if "hello" in message_lower or "hi" in message_lower:
-            return "Hello! I'm the AI Change Impact Analyzer. I can help analyze the impact of proposed changes, review past incidents, or answer questions about the system architecture."
-        elif "help" in message_lower:
-            return "I can help with:\n1. **Change Impact Analysis** - Describe a proposed change, and I'll analyze risks\n2. **Incident Lookup** - Search past incidents\n3. **Architecture Questions** - Answer questions about the system"
-        elif "architecture" in message_lower:
-            return "The system consists of 19 microservices organized by domain: Commerce, Order, Platform, Data & ML, Security. Key components include payment-gateway, order-service, user-service, and api-gateway."
-        elif "incident" in message_lower:
-            return "I have access to 50+ historical incidents. The most common issues involve database connection problems, Kafka consumer lag, and configuration changes."
-        elif "thank" in message_lower:
-            return "You're welcome! Feel free to ask if you need any further analysis or have more questions."
-        else:
-            return "I understand your message. Would you like me to perform a change impact analysis, look up information about the system, or help with something else?"
+        Classifies input as conversation or change-analysis and responds
+        accordingly. Delegates to `ConversationalEngine`, which generates a
+        genuinely dynamic reply for every request — either a real LLM call
+        (when AI_PROVIDER is configured with valid credentials) grounded in
+        retrieved RAG evidence, or a data-grounded synthesis built from the
+        actual matching records for that specific question (never a fixed
+        canned string — see app/agents/conversational_engine.py).
+        """
+        return self.conversational_engine.respond(message, conversation_history)
 
     def get_change_types(self) -> list:
         """Get available change types."""

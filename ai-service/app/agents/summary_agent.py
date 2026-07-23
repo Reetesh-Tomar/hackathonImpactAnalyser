@@ -37,6 +37,42 @@ class SummaryAgent(BaseAgent):
         if not impacted_services:
             impacted_services = intake.get("primary_services", [])
 
+        # Rich per-service metadata (criticality/owner/role) for the dashboard's
+        # impacted-services list — falls back to a bare "target" row per name
+        # if the dependency agent didn't produce details (e.g. unknown service).
+        impacted_services_detailed = dependency.get("impacted_details", [])
+        if not impacted_services_detailed and impacted_services:
+            impacted_services_detailed = [
+                {"name": name, "criticality": "unknown", "owner": "unknown", "type": "unknown", "role": "target"}
+                for name in impacted_services
+            ]
+
+        primary_services = intake.get("primary_services", [])
+        primary_component = primary_services[0] if primary_services else None
+        inferred_change_type = intake.get("change_type", input_data.get("change_type", "enhancement"))
+
+        # Short, factual "why the AI chose this" bullets — every bullet cites
+        # a concrete number/value already computed by an earlier agent, so
+        # this is a summary of real reasoning, not a fabricated explanation.
+        reasoning: List[str] = []
+        if primary_component:
+            match_kind = "an explicit affected-services match" if primary_component in (input_data.get("affected_services") or []) else "a keyword match in the change title/description"
+            reasoning.append(f"Primary component resolved to '{primary_component}' via {match_kind}.")
+        scope = intake.get("scope")
+        if scope:
+            reasoning.append(f"Change scope classified as '{scope}' based on {len(primary_services)} primary service(s) and change type '{inferred_change_type}'.")
+        critical_count = len(dependency.get("critical_services_impacted", []))
+        if impacted_services:
+            reasoning.append(
+                f"Dependency graph traversal found {len(impacted_services)} impacted service(s)"
+                + (f", {critical_count} of which are critical-tier" if critical_count else "")
+                + "."
+            )
+        # Compile similar incidents
+        similar_incidents = incident.get("similar_incidents", [])
+        if similar_incidents:
+            reasoning.append(f"Cross-referenced {len(similar_incidents)} similar historical incident(s) to ground the risk assessment.")
+
         # Compile teams
         teams_to_notify = notification.get("teams_to_notify", ["Operations"])
 
@@ -45,9 +81,6 @@ class SummaryAgent(BaseAgent):
 
         # Compile recommended tests
         recommended_tests = risk.get("recommended_tests", ["Standard testing"])
-
-        # Compile similar incidents
-        similar_incidents = incident.get("similar_incidents", [])
 
         # Compile mitigation plan
         mitigation_plan = risk.get("mitigation_plan", ["Standard mitigation"])
@@ -97,7 +130,11 @@ class SummaryAgent(BaseAgent):
             "retrieved_evidence": retrieved_evidence,
             "data_sources_used": data_sources_used,
             "processing_time_ms": processing_time_ms,
-            "mock_mode": mock_mode
+            "mock_mode": mock_mode,
+            "impacted_services_detailed": impacted_services_detailed,
+            "primary_component": primary_component,
+            "inferred_change_type": inferred_change_type,
+            "reasoning": reasoning
         }
 
         return result

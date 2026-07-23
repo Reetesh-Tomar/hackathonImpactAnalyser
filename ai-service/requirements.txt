@@ -10,3 +10,11 @@ sentence-transformers==3.0.1
 pytest==8.3.3
 pytest-asyncio==0.24.0
 
+# --- MODULE 3: RAG / Vector Search (all optional, gracefully degrade to local fallback) ---
+google-cloud-aiplatform==1.68.0
+chromadb==0.5.15
+tenacity==9.0.0
+tiktoken==0.8.0
+
+
+python-dotenv==1.0.1
