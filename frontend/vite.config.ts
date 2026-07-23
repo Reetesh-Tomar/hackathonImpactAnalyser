@@ -8,7 +8,7 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://backend:8081',
+        target: 'https://hackathonimpactanalyser-backend-904105072538.asia-south1.run.app',
         changeOrigin: true,
       },
     },
