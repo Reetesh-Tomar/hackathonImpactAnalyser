@@ -1,8 +1,8 @@
 import type { ChangeImpactResponse, AssistantResponse, ChatResponse, ChangeType, Component } from '../types'
 import type { ChangeAnalysisRequestV2, FullAnalysisResponseV2 } from '../types/reactAnalysis'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081'
-const AI_SERVICE_URL = import.meta.env.VITE_AI_SERVICE_URL || 'http://localhost:8000'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://hackathonimpactanalyser-backend-904105072538.asia-south1.run.app'
+const AI_SERVICE_URL = import.meta.env.VITE_AI_SERVICE_URL || 'https://hackathonimpactanalyser-904105072538.asia-south1.run.app'
 const DIRECT_AI_MODE = import.meta.env.VITE_DIRECT_AI_MODE === 'true'
 
 function getBaseUrl(path: string): string {
