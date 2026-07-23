@@ -29,7 +29,7 @@ RUN echo 'server { \
         try_files $uri $uri/ /index.html; \
     } \
     location /api { \
-        proxy_pass http://backend:8081; \
+        proxy_pass https://hackathonimpactanalyser-backend-904105072538.asia-south1.run.app; \
         proxy_set_header Host $host; \
         proxy_set_header X-Real-IP $remote_addr; \
     } \
